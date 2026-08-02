@@ -1,7 +1,6 @@
 package com.dsavitskiy.authentification.service;
 
 import com.dsavitskiy.authentification.dto.RegisterRequestDto;
-import com.dsavitskiy.authentification.exception.ConflictException;
 import com.dsavitskiy.authentification.exception.KeycloakRegistrationException;
 import jakarta.ws.rs.core.Response;
 import lombok.RequiredArgsConstructor;
