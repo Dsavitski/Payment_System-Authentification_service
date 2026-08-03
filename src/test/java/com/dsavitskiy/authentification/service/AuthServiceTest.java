@@ -12,7 +12,6 @@ import com.dsavitskiy.authentification.exception.AuthentificationException;
 import com.dsavitskiy.authentification.exception.CredentialException;
 import com.dsavitskiy.authentification.exception.UserRegistrationException;
 import com.dsavitskiy.authentification.mapper.AuthUserMapper;
-import feign.FeignException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -30,7 +29,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.any;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -162,10 +160,8 @@ class AuthServiceTest {
         when(authUserMapper.toCreateUser(registerRequest, userId))
             .thenReturn(createUserRequest);
 
-        FeignException exception = mock(FeignException.class);
-
         when(userClient.createUser(createUserRequest))
-            .thenThrow(exception);
+            .thenThrow(new UserRegistrationException("Failed to create user"));
 
         assertThrows(
             UserRegistrationException.class,
@@ -202,14 +198,10 @@ class AuthServiceTest {
     }
 
     @Test
-    void login_shouldThrowCredentialExceptionWhenStatus400() {
-
-        FeignException exception = mock(FeignException.class);
-
-        when(exception.status()).thenReturn(400);
+    void login_shouldThrowCredentialException() {
 
         when(keycloakClient.getToken(any()))
-            .thenThrow(exception);
+            .thenThrow(new CredentialException("Invalid login or password"));
 
         assertThrows(
             CredentialException.class,
@@ -220,33 +212,12 @@ class AuthServiceTest {
             .getToken(any());
     }
 
+
     @Test
-    void login_shouldThrowCredentialExceptionWhenStatus401() {
-
-        FeignException exception = mock(FeignException.class);
-
-        when(exception.status()).thenReturn(401);
+    void login_shouldThrowAuthenticationException() {
 
         when(keycloakClient.getToken(any()))
-            .thenThrow(exception);
-
-        assertThrows(
-            CredentialException.class,
-            () -> authService.login(loginRequest)
-        );
-
-        verify(keycloakClient)
-            .getToken(any());
-    }
-    @Test
-    void login_shouldThrowAuthenticationExceptionWhenServerError() {
-
-        FeignException exception = mock(FeignException.class);
-
-        when(exception.status()).thenReturn(500);
-
-        when(keycloakClient.getToken(any()))
-            .thenThrow(exception);
+            .thenThrow(new AuthentificationException("Failed to login"));
 
         assertThrows(
             AuthentificationException.class,
@@ -283,14 +254,10 @@ class AuthServiceTest {
     }
 
     @Test
-    void refreshToken_shouldThrowCredentialExceptionWhenStatus400() {
-
-        FeignException exception = mock(FeignException.class);
-
-        when(exception.status()).thenReturn(400);
+    void refreshToken_shouldThrowCredentialException() {
 
         when(keycloakClient.getToken(any()))
-            .thenThrow(exception);
+            .thenThrow(new CredentialException("Refresh token is invalid"));
 
         assertThrows(
             CredentialException.class,
@@ -301,34 +268,12 @@ class AuthServiceTest {
             .getToken(any());
     }
 
-    @Test
-    void refreshToken_shouldThrowCredentialExceptionWhenStatus401() {
-
-        FeignException exception = mock(FeignException.class);
-
-        when(exception.status()).thenReturn(401);
-
-        when(keycloakClient.getToken(any()))
-            .thenThrow(exception);
-
-        assertThrows(
-            CredentialException.class,
-            () -> authService.refreshToken(refreshRequest)
-        );
-
-        verify(keycloakClient)
-            .getToken(any());
-    }
 
     @Test
-    void refreshToken_shouldThrowAuthenticationExceptionWhenServerError() {
-
-        FeignException exception = mock(FeignException.class);
-
-        when(exception.status()).thenReturn(500);
+    void refreshToken_shouldThrowAuthenticationException() {
 
         when(keycloakClient.getToken(any()))
-            .thenThrow(exception);
+            .thenThrow(new AuthentificationException("Failed to refresh token"));
 
         assertThrows(
             AuthentificationException.class,

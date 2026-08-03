@@ -18,7 +18,7 @@ public record CreateUserRequestDto(
     @NotNull(message = "Birth date is obligatory")
     @Past(message = "Birth date must be in past")
     LocalDate birthDate,
-    @NotBlank
+    @NotBlank(message = "Email is obligatory")
     @Email(message = "Invalid email")
     String email) {
 

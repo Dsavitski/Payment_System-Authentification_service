@@ -9,8 +9,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 
 @FeignClient(
     name = "keycloak-client",
-    url = "${keycloak.server-url}/realms/${keycloak.realm}/protocol/openid-connect"
-)
+    url = "${keycloak.server-url}/realms/${keycloak.realm}/protocol/openid-connect",
+    configuration = KeycloakClient.class)
 public interface KeycloakClient {
 
     @PostMapping(
