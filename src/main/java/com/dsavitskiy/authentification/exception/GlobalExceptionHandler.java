@@ -16,31 +16,37 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(AuthentificationException.class)
     public ResponseEntity<ErrorResponseDto> authenticationException(AuthentificationException ex) {
+        log.info("Authentication exception: {}", ex.getMessage());
         return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
     }
 
     @ExceptionHandler(ConflictException.class)
     public ResponseEntity<ErrorResponseDto> conflictException(ConflictException ex) {
+        log.info("Conflict exception: {}", ex.getMessage());
         return buildResponse(HttpStatus.CONFLICT, ex.getMessage());
     }
 
     @ExceptionHandler(CredentialException.class)
     public ResponseEntity<ErrorResponseDto> credentialException(CredentialException ex) {
+        log.info("Credential exception: {}", ex.getMessage());
         return buildResponse(HttpStatus.UNAUTHORIZED, ex.getMessage());
     }
 
     @ExceptionHandler(KeycloakRegistrationException.class)
     public ResponseEntity<ErrorResponseDto> keycloakRegistrationException(KeycloakRegistrationException ex) {
+        log.info("Keycloak registration exception: {}", ex.getMessage());
         return buildResponse(HttpStatus.BAD_GATEWAY, ex.getMessage());
     }
 
     @ExceptionHandler(UserRegistrationException.class)
     public ResponseEntity<ErrorResponseDto> userRegistrationException(UserRegistrationException ex) {
+        log.info("User registration exception: {}", ex.getMessage());
         return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponseDto> handleUnexpectedException(Exception ex) {
+        log.info("Unexpected exception: {}", ex.getMessage());
         return buildResponse(
             HttpStatus.INTERNAL_SERVER_ERROR,
             "Unexpected server error: " + ex.getMessage()

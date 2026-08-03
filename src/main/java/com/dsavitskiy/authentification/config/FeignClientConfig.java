@@ -1,7 +1,7 @@
 package com.dsavitskiy.authentification.config;
 
+import com.dsavitskiy.authentification.exception.AuthentificationException;
 import feign.RequestInterceptor;
-import feign.RequestTemplate;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -31,12 +31,9 @@ public class FeignClientConfig {
 
     @Bean
     public RequestInterceptor feignTokenInterceptor() {
-        return new RequestInterceptor() {
-            @Override
-            public void apply(RequestTemplate requestTemplate) {
-                String token = getServiceAccountToken();
-                requestTemplate.header("Authorization", "Bearer " + token);
-            }
+        return requestTemplate -> {
+            String token = getServiceAccountToken();
+            requestTemplate.header("Authorization", "Bearer " + token);
         };
     }
 
@@ -59,6 +56,6 @@ public class FeignClientConfig {
         if (response != null && response.containsKey("access_token")) {
             return (String) response.get("access_token");
         }
-        throw new RuntimeException("Не удалось получить токен сервисного аккаунта из Keycloak");
+        throw new AuthentificationException("Failed to get token from Keycloak");
     }
 }

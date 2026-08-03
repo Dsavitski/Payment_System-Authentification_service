@@ -23,10 +23,17 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDate;
+import java.time.Month;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class AuthServiceTest {
@@ -80,7 +87,7 @@ class AuthServiceTest {
             "password",
             "Ivan",
             "Ivanov",
-            LocalDate.of(2000,1,1),
+            LocalDate.of(2000, Month.JANUARY,1),
             "ivan@test.com"
         );
 
@@ -97,7 +104,7 @@ class AuthServiceTest {
             userId,
             "Ivan",
             "Ivanov",
-            LocalDate.of(2000,1,1),
+            LocalDate.of(2000,Month.JANUARY,1),
             "ivan@test.com"
         );
 
@@ -105,7 +112,7 @@ class AuthServiceTest {
             userId,
             "Ivan",
             "Ivanov",
-            LocalDate.of(2000,1,1),
+            LocalDate.of(2000,Month.JANUARY,1),
             "ivan@test.com",
             true
         );
