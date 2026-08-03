@@ -2,7 +2,7 @@ package com.dsavitskiy.authentification.config;
 
 import com.dsavitskiy.authentification.exception.AuthentificationException;
 import feign.RequestInterceptor;
-import org.springframework.beans.factory.annotation.Value;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpEntity;
@@ -15,19 +15,10 @@ import org.springframework.web.client.RestTemplate;
 import java.util.Map;
 
 @Configuration
+@RequiredArgsConstructor
 public class FeignClientConfig {
 
-    @Value("${keycloak.server-url}")
-    private String keycloakUrl;
-
-    @Value("${keycloak.realm}")
-    private String realm;
-
-    @Value("${keycloak.client-id}")
-    private String clientId;
-
-    @Value("${keycloak.client-secret}")
-    private String clientSecret;
+    private final KeycloakProperties keycloakProperties;
 
     @Bean
     public RequestInterceptor feignTokenInterceptor() {
@@ -42,14 +33,14 @@ public class FeignClientConfig {
 
         MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
         form.add("grant_type", "client_credentials");
-        form.add("client_id", clientId);
-        form.add("client_secret", clientSecret);
+        form.add("client_id", keycloakProperties.getClientId());
+        form.add("client_secret", keycloakProperties.getClientSecret());
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
 
         HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(form, headers);
-        String url = keycloakUrl + "/realms/" + realm + "/protocol/openid-connect/token";
+        String url = keycloakProperties.getServerUrl() + "/realms/" + keycloakProperties.getRealm() + "/protocol/openid-connect/token";
 
         Map<String, Object> response = restTemplate.postForObject(url, request, Map.class);
 
