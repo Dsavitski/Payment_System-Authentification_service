@@ -1,5 +1,4 @@
 package com.dsavitskiy.authentification.service;
-
 import com.dsavitskiy.authentification.config.KeycloakProperties;
 import com.dsavitskiy.authentification.exception.AuthentificationException;
 import lombok.RequiredArgsConstructor;

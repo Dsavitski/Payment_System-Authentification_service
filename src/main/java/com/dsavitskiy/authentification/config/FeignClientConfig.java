@@ -10,7 +10,7 @@ import org.springframework.context.annotation.Configuration;
 @RequiredArgsConstructor
 public class FeignClientConfig {
 
-    private final KeycloakTokenService keycloakTokenService; // Внедряем наш сервис из Шага 2
+    private final KeycloakTokenService keycloakTokenService;
 
     @Bean
     public RequestInterceptor feignTokenInterceptor() {
