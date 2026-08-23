@@ -1,7 +1,12 @@
 package com.dsavitskiy.authentification.service;
 
 import com.dsavitskiy.authentification.client.UserClient;
-import com.dsavitskiy.authentification.dto.*;
+import com.dsavitskiy.authentification.dto.CreateUserRequestDto;
+import com.dsavitskiy.authentification.dto.LoginRequestDto;
+import com.dsavitskiy.authentification.dto.RefreshTokenRequestDto;
+import com.dsavitskiy.authentification.dto.RegisterRequestDto;
+import com.dsavitskiy.authentification.dto.TokenResponseDto;
+import com.dsavitskiy.authentification.dto.UserResponseDto;
 import com.dsavitskiy.authentification.exception.AuthentificationException;
 import com.dsavitskiy.authentification.exception.CredentialException;
 import com.dsavitskiy.authentification.exception.UserRegistrationException;
@@ -14,7 +19,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.*;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.client.RestTemplate;
 
@@ -22,9 +29,17 @@ import java.time.LocalDate;
 import java.time.Month;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class AuthServiceTest {
