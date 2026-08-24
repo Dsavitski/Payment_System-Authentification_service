@@ -14,22 +14,24 @@ public class KeycloakErrorDecoder implements ErrorDecoder {
 
     @Override
     public Exception decode(String methodKey, Response response) {
-        String responseBody = "";
         try {
-            if (response.body() != null) {
-                responseBody = Util.toString(response.body().asReader(Util.UTF_8));
+            String responseBody = response.body() == null ? "Empty response body" :
+                Util.toString(response.body().asReader(Util.UTF_8));
+            log.info("Keycloak returned error status: {} for method: {}. Body: {}",
+                response.status(),
+                methodKey,
+                responseBody
+            );
+
+            if (response.status() == 400 || response.status() == 401) {
+                return new CredentialException("Invalid login or password: " + responseBody);
             }
+
+            return new AuthentificationException("Failed to process Keycloak request: " + responseBody);
         } catch (IOException e) {
-            responseBody = "Failed to read response body";
+            log.info("Failed to read Keycloak error response for method: {}", methodKey, e);
+
+            return new AuthentificationException("Failed to process Keycloak error response", e);
         }
-
-        log.error("Keycloak returned error status: {} for method: {}. Body: {}",
-            response.status(), methodKey, responseBody);
-
-        if (response.status() == 400 || response.status() == 401) {
-            return new CredentialException("Invalid login or password. Keycloak says: " + responseBody);
-        }
-
-        return new AuthentificationException("Failed to login. Keycloak says: " + responseBody);
     }
 }
