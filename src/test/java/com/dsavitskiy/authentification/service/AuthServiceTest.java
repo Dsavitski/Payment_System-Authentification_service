@@ -1,6 +1,5 @@
 package com.dsavitskiy.authentification.service;
 
-import com.dsavitskiy.authentification.client.KeycloakClient;
 import com.dsavitskiy.authentification.client.UserClient;
 import com.dsavitskiy.authentification.dto.CreateUserRequestDto;
 import com.dsavitskiy.authentification.dto.LoginRequestDto;
@@ -12,14 +11,19 @@ import com.dsavitskiy.authentification.exception.AuthentificationException;
 import com.dsavitskiy.authentification.exception.CredentialException;
 import com.dsavitskiy.authentification.exception.UserRegistrationException;
 import com.dsavitskiy.authentification.mapper.AuthUserMapper;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentMatchers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDate;
 import java.time.Month;
@@ -28,8 +32,12 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.any;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -46,7 +54,10 @@ class AuthServiceTest {
     private UserClient userClient;
 
     @Mock
-    private KeycloakClient keycloakClient;
+    private RestTemplate restTemplate;
+
+    @Mock
+    private ObjectMapper objectMapper;
 
     @InjectMocks
     private AuthService authService;
@@ -54,233 +65,147 @@ class AuthServiceTest {
     private RegisterRequestDto registerRequest;
     private LoginRequestDto loginRequest;
     private RefreshTokenRequestDto refreshRequest;
-
-    private UUID userId;
-
-    private CreateUserRequestDto createUserRequest;
-
-    private UserResponseDto userResponse;
-
-    private TokenResponseDto tokenResponse;
+    private UUID mockKeycloakUserId;
 
     @BeforeEach
     void setUp() {
-
-        ReflectionTestUtils.setField(
-            authService,
-            "clientId",
-            "test-client"
-        );
-
-        ReflectionTestUtils.setField(
-            authService,
-            "clientSecret",
-            "secret"
-        );
-
-        userId = UUID.randomUUID();
-
         registerRequest = new RegisterRequestDto(
-            "login",
-            "password",
-            "Ivan",
-            "Ivanov",
-            LocalDate.of(2000, Month.JANUARY,1),
-            "ivan@test.com"
+            "testuser",
+            "Password123!",
+            "John",
+            "Doe",
+            LocalDate.of(1990, Month.JANUARY, 1),
+            "test@example.com"
         );
+        loginRequest = new LoginRequestDto("testuser", "Password123!");
+        refreshRequest = new RefreshTokenRequestDto("mock-refresh-token");
+        mockKeycloakUserId = UUID.randomUUID();
 
-        loginRequest = new LoginRequestDto(
-            "login",
-            "password"
-        );
-
-        refreshRequest = new RefreshTokenRequestDto(
-            "refresh-token"
-        );
-
-        createUserRequest = new CreateUserRequestDto(
-            userId,
-            "Ivan",
-            "Ivanov",
-            LocalDate.of(2000,Month.JANUARY,1),
-            "ivan@test.com"
-        );
-
-        userResponse = new UserResponseDto(
-            userId,
-            "Ivan",
-            "Ivanov",
-            LocalDate.of(2000,Month.JANUARY,1),
-            "ivan@test.com",
-            true
-        );
-
-        tokenResponse = new TokenResponseDto(
-            "access-token",
-            "refresh-token"
-        );
+        ReflectionTestUtils.setField(authService, "keycloakServerUrl", "http://localhost:8080");
+        ReflectionTestUtils.setField(authService, "realm", "payment-system");
+        ReflectionTestUtils.setField(authService, "clientId", "test-client-id");
+        ReflectionTestUtils.setField(authService, "clientSecret", "test-client-secret");
     }
 
     @Test
-    void register_shouldCreateUserSuccessfully() {
+    void register_Successful() {
+        CreateUserRequestDto createUserRequest = new CreateUserRequestDto(
+            mockKeycloakUserId,
+            "John",
+            "Doe",
+            LocalDate.of(1990, Month.JANUARY, 1),
+            "test@example.com"
+        );
 
-        when(keycloakUserService.createKeycloakUser(registerRequest))
-            .thenReturn(userId);
+        UserResponseDto expectedResponse = new UserResponseDto(
+            mockKeycloakUserId,
+            "John",
+            "Doe",
+            LocalDate.of(1990, Month.JANUARY, 1),
+            "test@example.com",
+            true
+        );
 
-        when(authUserMapper.toCreateUser(registerRequest, userId))
-            .thenReturn(createUserRequest);
-
-        when(userClient.createUser(createUserRequest))
-            .thenReturn(userResponse);
+        when(keycloakUserService.createKeycloakUser(registerRequest)).thenReturn(mockKeycloakUserId);
+        when(authUserMapper.toCreateUser(registerRequest, mockKeycloakUserId)).thenReturn(createUserRequest);
+        when(userClient.createUser(createUserRequest)).thenReturn(expectedResponse);
 
         UserResponseDto result = authService.register(registerRequest);
 
         assertNotNull(result);
-        assertEquals(userResponse, result);
-
-        verify(keycloakUserService)
-            .createKeycloakUser(registerRequest);
-
-        verify(authUserMapper)
-            .toCreateUser(registerRequest, userId);
-
-        verify(userClient)
-            .createUser(createUserRequest);
-
-        verify(keycloakUserService, never())
-            .deleteKeycloakUser(any());
+        assertEquals(expectedResponse.email(), result.email());
+        verify(keycloakUserService, times(1)).createKeycloakUser(registerRequest);
+        verify(authUserMapper, times(1)).toCreateUser(registerRequest, mockKeycloakUserId);
+        verify(userClient, times(1)).createUser(createUserRequest);
+        verify(keycloakUserService, never()).deleteKeycloakUser(any());
     }
 
     @Test
-    void register_shouldRollbackWhenUserServiceFails() {
-
-        when(keycloakUserService.createKeycloakUser(registerRequest))
-            .thenReturn(userId);
-
-        when(authUserMapper.toCreateUser(registerRequest, userId))
-            .thenReturn(createUserRequest);
-
-        when(userClient.createUser(createUserRequest))
-            .thenThrow(new UserRegistrationException("Failed to create user"));
-
-        assertThrows(
-            UserRegistrationException.class,
-            () -> authService.register(registerRequest)
+    void register_RollbackOnUserClientFailure() {
+        CreateUserRequestDto createUserRequest = new CreateUserRequestDto(
+            mockKeycloakUserId,
+            "John",
+            "Doe",
+            LocalDate.of(1990, Month.JANUARY, 1),
+            "test@example.com"
         );
 
-        verify(keycloakUserService)
-            .deleteKeycloakUser(userId);
+        when(keycloakUserService.createKeycloakUser(registerRequest)).thenReturn(mockKeycloakUserId);
+        when(authUserMapper.toCreateUser(registerRequest, mockKeycloakUserId)).thenReturn(createUserRequest);
+        when(userClient.createUser(createUserRequest)).thenThrow(new UserRegistrationException("DB Error"));
+
+        UserRegistrationException exception = assertThrows(UserRegistrationException.class, () ->
+            authService.register(registerRequest)
+        );
+
+        assertEquals("DB Error", exception.getMessage());
+        verify(keycloakUserService, times(1)).createKeycloakUser(registerRequest);
+        verify(userClient, times(1)).createUser(createUserRequest);
+        verify(keycloakUserService, times(1)).deleteKeycloakUser(mockKeycloakUserId);
     }
 
     @Test
-    void login_shouldReturnTokens() {
+    void login_Successful() throws JsonProcessingException {
+        String mockJsonResponse = "{\"access_token\":\"mock-access\",\"refresh_token\":\"mock-refresh\"}";
+        TokenResponseDto expectedToken = new TokenResponseDto("mock-access", "mock-refresh");
+        String expectedUrl = "http://localhost:8080/realms/payment-system/protocol/openid-connect/token";
 
-        when(keycloakClient.getToken(
-            ArgumentMatchers.any()))
-            .thenReturn(tokenResponse);
+        ResponseEntity<String> mockResponseEntity = new ResponseEntity<>(mockJsonResponse, HttpStatus.OK);
+        when(restTemplate.postForEntity(eq(expectedUrl), any(HttpEntity.class), eq(String.class))).thenReturn(mockResponseEntity);
+        when(objectMapper.readValue(eq(mockJsonResponse), any(Class.class))).thenReturn(expectedToken);
 
-        TokenResponseDto result =
-            authService.login(loginRequest);
+        TokenResponseDto result = authService.login(loginRequest);
 
         assertNotNull(result);
-        assertEquals(
-            "access-token",
-            result.accessToken()
-        );
-
-        assertEquals(
-            "refresh-token",
-            result.refreshToken()
-        );
-
-        verify(keycloakClient)
-            .getToken(any());
+        assertEquals("mock-access", result.accessToken());
+        verify(restTemplate, times(1)).postForEntity(eq(expectedUrl), any(HttpEntity.class), eq(String.class));
     }
 
     @Test
-    void login_shouldThrowCredentialException() {
+    void login_FailsWithCredentialException_OnNon2xxStatus() throws JsonProcessingException {
+        String expectedUrl = "http://localhost:8080/realms/payment-system/protocol/openid-connect/token";
+        ResponseEntity<String> mockResponseEntity = new ResponseEntity<>("Invalid credentials", HttpStatus.UNAUTHORIZED);
 
-        when(keycloakClient.getToken(any()))
-            .thenThrow(new CredentialException("Invalid login or password"));
+        when(restTemplate.postForEntity(eq(expectedUrl), any(HttpEntity.class), eq(String.class))).thenReturn(mockResponseEntity);
 
-        assertThrows(
-            CredentialException.class,
-            () -> authService.login(loginRequest)
+        CredentialException exception = assertThrows(CredentialException.class, () ->
+            authService.login(loginRequest)
         );
 
-        verify(keycloakClient)
-            .getToken(any());
-    }
-
-
-    @Test
-    void login_shouldThrowAuthenticationException() {
-
-        when(keycloakClient.getToken(any()))
-            .thenThrow(new AuthentificationException("Failed to login"));
-
-        assertThrows(
-            AuthentificationException.class,
-            () -> authService.login(loginRequest)
-        );
-
-        verify(keycloakClient)
-            .getToken(any());
+        assertEquals("Invalid login or password", exception.getMessage());
+        verify(objectMapper, never()).readValue(anyString(), any(Class.class));
     }
 
     @Test
-    void refreshToken_shouldReturnNewTokens() {
+    void login_FailsWithAuthentificationException_OnJsonParseError() throws JsonProcessingException {
+        String mockJsonResponse = "{invalid json}";
+        String expectedUrl = "http://localhost:8080/realms/payment-system/protocol/openid-connect/token";
 
-        when(keycloakClient.getToken(any()))
-            .thenReturn(tokenResponse);
+        ResponseEntity<String> mockResponseEntity = new ResponseEntity<>(mockJsonResponse, HttpStatus.OK);
+        when(restTemplate.postForEntity(eq(expectedUrl), any(HttpEntity.class), eq(String.class))).thenReturn(mockResponseEntity);
+        when(objectMapper.readValue(eq(mockJsonResponse), any(Class.class))).thenThrow(new JsonProcessingException("Parse error") {});
 
-        TokenResponseDto result =
-            authService.refreshToken(refreshRequest);
+        AuthentificationException exception = assertThrows(AuthentificationException.class, () ->
+            authService.login(loginRequest)
+        );
+
+        assertTrue(exception.getMessage().contains("Failed to parse token response"));
+    }
+
+    @Test
+    void refreshToken_Successful() throws JsonProcessingException {
+        String mockJsonResponse = "{\"access_token\":\"new-access\",\"refresh_token\":\"new-refresh\"}";
+        TokenResponseDto expectedToken = new TokenResponseDto("new-access", "new-refresh");
+        String expectedUrl = "http://localhost:8080/realms/payment-system/protocol/openid-connect/token";
+
+        ResponseEntity<String> mockResponseEntity = new ResponseEntity<>(mockJsonResponse, HttpStatus.OK);
+        when(restTemplate.postForEntity(eq(expectedUrl), any(HttpEntity.class), eq(String.class))).thenReturn(mockResponseEntity);
+        when(objectMapper.readValue(eq(mockJsonResponse), any(Class.class))).thenReturn(expectedToken);
+
+        TokenResponseDto result = authService.refreshToken(refreshRequest);
 
         assertNotNull(result);
-
-        assertEquals(
-            "access-token",
-            result.accessToken()
-        );
-
-        assertEquals(
-            "refresh-token",
-            result.refreshToken()
-        );
-
-        verify(keycloakClient)
-            .getToken(any());
-    }
-
-    @Test
-    void refreshToken_shouldThrowCredentialException() {
-
-        when(keycloakClient.getToken(any()))
-            .thenThrow(new CredentialException("Refresh token is invalid"));
-
-        assertThrows(
-            CredentialException.class,
-            () -> authService.refreshToken(refreshRequest)
-        );
-
-        verify(keycloakClient)
-            .getToken(any());
-    }
-
-
-    @Test
-    void refreshToken_shouldThrowAuthenticationException() {
-
-        when(keycloakClient.getToken(any()))
-            .thenThrow(new AuthentificationException("Failed to refresh token"));
-
-        assertThrows(
-            AuthentificationException.class,
-            () -> authService.refreshToken(refreshRequest)
-        );
-
-        verify(keycloakClient)
-            .getToken(any());
+        assertEquals("new-access", result.accessToken());
+        verify(restTemplate, times(1)).postForEntity(eq(expectedUrl), any(HttpEntity.class), eq(String.class));
     }
 }
